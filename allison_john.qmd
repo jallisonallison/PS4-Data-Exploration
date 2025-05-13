@@ -1,0 +1,166 @@
+---
+title: "Certainty in Faith - Initial Insights"
+author: John Allison
+format: html
+editor: visual
+---
+
+GitHub Repo: <https://github.com/jallisonallison/PS4-Data-Exploration>
+
+## Introduction
+
+In the following analysis, I investigated data from The Pew Research Center's Religious Landscape Study (RLS), a comprehensive study involving over 35,000 Americans that explores their their religious identities, beliefs, practices, and socio-political views. The RLS is a national cross-sectional survey conducted in both Spanish and English, that gives participants opportunities to participate via mail, internet, and over the phone. The Pew Research Center has conducted the RLS three times- in 2007, 2014, and 2023/2024; this analysis focused on the most recent edition. The data on which I based my analysis comes from the public use file- a version of the raw data that excludes several sensitive variables that could be used to compromise participant anonymity. Please find it cited to begin the following section.
+
+## Dataset
+
+> Pew Research Center. 2025. “2023-24 U.S. Religious Landscape Study Dataset – Public Use File.” doi: [10.58094/3kwb-bf52](https://doi.org/10.58094/3kwb-bf52).
+
+This dataset covers an address-based sample population of Americans over the course of approximately 7 months between 2023 and 2024. Each observation represents one of the 36,908 surveyed U.S. adults, and each observation contains attitudes and categorical values on 150 survey variables. Principally, as its name suggests, this study aims to accurately decompose the religions practiced in the U.S. Accordingly, the research team developed an elaborate religious categorization structure to explain the relationships between denominations and their broader religious traditions (for example, for denomination- variable `DENOM`- there are 298 unique codes). Due to its rigorous research design and methodology, this data can be treated as a representation of the U.S. adult population, and with it we can learn about and make connections with the personal nuances of the U.S.'s religious fabric.
+
+## Investigation
+
+For my investigation into the RLS, I was interested in three variables: `GOD2`, `PARTY`, and `INC_SDT1`. These variables and their response categories are broken down below:
+
++--------------------+-----------------------------------------------------------------------------+------------------------------------+
+| **Variable Name**  | **Variable Label**                                                          | **Response Categories**            |
++--------------------+-----------------------------------------------------------------------------+------------------------------------+
+| GOD2               | How certain are you about \[your\] belief \[in God or a universal spirit\]? | Absolutely certain;                |
+|                    |                                                                             |                                    |
+|                    |                                                                             | Fairly certain;                    |
+|                    |                                                                             |                                    |
+|                    |                                                                             | Not too certain;                   |
+|                    |                                                                             |                                    |
+|                    |                                                                             | Not at all certain;                |
+|                    |                                                                             |                                    |
+|                    |                                                                             | DON'T KNOW/REFUSED                 |
++--------------------+-----------------------------------------------------------------------------+------------------------------------+
+| PARTY              | In politics today, do you consider yourself a...                            | Republican;                        |
+|                    |                                                                             |                                    |
+|                    |                                                                             | Democrat;                          |
+|                    |                                                                             |                                    |
+|                    |                                                                             | Independent;                       |
+|                    |                                                                             |                                    |
+|                    |                                                                             | Something else;                    |
+|                    |                                                                             |                                    |
+|                    |                                                                             | DON'T KNOW/REFUSED                 |
++--------------------+-----------------------------------------------------------------------------+------------------------------------+
+| INC_SDT1           | Last year, what was your total family income?                               | Less than \$30,000;                |
+|                    |                                                                             |                                    |
+|                    |                                                                             | \$30,000 to less than \$40,000;    |
+|                    |                                                                             |                                    |
+|                    |                                                                             | \$40,000 to less than \$50,000;    |
+|                    |                                                                             |                                    |
+|                    |                                                                             | \$50,000 to less than \$75,000;    |
+|                    |                                                                             |                                    |
+|                    |                                                                             | \$75,000 to less than \$100,000;   |
+|                    |                                                                             |                                    |
+|                    |                                                                             | \$100,000 to less than \$125,000;  |
+|                    |                                                                             |                                    |
+|                    |                                                                             | \$125,000 to less than \$150,000;  |
+|                    |                                                                             |                                    |
+|                    |                                                                             | \$150,000 or more;                 |
+|                    |                                                                             |                                    |
+|                    |                                                                             | DON'T KNOW/REFUSED                 |
++--------------------+-----------------------------------------------------------------------------+------------------------------------+
+
+I was mainly interested in exploring how one's certainty in their belief system changes across groups. My interest in this topic proceeds from my Catholic background (and recent avalanche of media coverage on the conclave and Pope Leo XIV), and the effect that faith has on well-being. Truthfully, while exploring the questions in this study, I was struck by the prompt of `GOD2`- so much so that it laid out the landscape for my exploration. `GOD2` is an immediate follow-up to `GOD`, which asks if the respondent believes in God or a universal spirit. `GOD2` is different, however, in that it probes further into one's faith than about specific belief systems. A person's faith often wavers during times of distress, when they're forced to reconcile their beliefs with their own reasoning. This wavering can also be indicative of the presence of much deeper, more grand stressors, like severe economic hardship. For this investigation, I wanted to dig below the surface of `GOD2` to see how different groups experience challenges to their faiths in different ways.
+
+```{r}
+#| label: packages
+#| include: false
+
+library(tidyverse)
+library(haven)
+library(ggplot2)
+library(forcats)
+library(scales)
+```
+
+```{r}
+#| label: dataset
+#| include: false
+
+df <- read_sav('/Users/jallison/Desktop/JH/Spring_2025/StatsProgramming/final_project/datasets/2023-24 RLS Public Use File Feb 19.sav')
+rls_df <- df %>%
+  select(GOD2, PARTY, INC_SDT1) %>%
+  mutate(GOD2_label = as_factor(GOD2),
+         PARTY_label = as_factor(PARTY),
+         INC_SDT1_label = as_factor(INC_SDT1)
+         ) %>%
+  mutate(across(
+        .cols = where(~ !is.factor(.)),
+        .fns = ~as.numeric(.))) %>%
+  drop_na()
+```
+
+As you can see in the table below as an example, I isolated my three main variables of interest from the over 150 variables stored in the LRS dataset. I chose to keep the value codes as well as the value labels in this filtered dataset for possible future manipulation.
+
+```{r}
+#| label: dataset head
+#| echo: false
+knitr::kable(head(rls_df, 5))
+```
+
+## Findings
+
+After filtering out non-responses, among the 36,345 participants remaining, 60% responded to `GOD2` that they are absolutely certain in their belief system- whatever that may be. This finding is noteworthy considering the general lack of evidence of higher powers, but also this statistic could be covering for a population of self-certain atheists who could be overlooked. I regret not including the variable `GOD` in my exploration, which asked, "Do you believe in God or a universal spirit?" as it would have helped me differentiate between the staunch believers on either side of the belief spectrum.
+
+```{r}
+#| label: GOD2_pie
+#| echo: false
+
+prop <- round(prop.table(table(rls_df$GOD2_label)) * 100, digits = 1)
+
+GOD2_pie <- pie(prop[-5],
+                labels = paste(names(prop[-5]), " (", as.vector(prop[-5]), "%)", sep=""),
+                col = c('springgreen1','lightsteelblue1','orange3','lightyellow1'),
+                radius = 1, main = "How certain are you about your \n belief in God or a 
+                universal spirit? (n=36,345)\n")
+```
+
+Plotting total family income, `INC_SDT1`, against `GOD2`, an interesting trend emerges. As you can see below, as total family income moves to higher brackets, one's absolute certainty in their belief system decreases. I imagine that the process of "losing your religion" is gradual, and thus the \~15% total decrease in people who are absolutely certain is probably consumed by those who are fairly certain in their beliefs. Interestingly, in the move from "\$125,000-\$150,000" to "\$150,000 or more", there is a pretty significant increase in the percentage of respondents who are "not too certain" in their beliefs.
+
+```{r}
+#| echo: false
+
+income_spirit_df <- rls_df %>%
+  filter(INC_SDT1_label != "DON'T KNOW/REFUSED",
+         GOD2_label != "DON'T KNOW/REFUSED") %>%
+  group_by(INC_SDT1_label, GOD2_label) %>%
+  count(name = "n_GOD2") %>%
+  ungroup() %>%
+  mutate(GOD2_label = fct_rev(GOD2_label))
+
+ggplot(income_spirit_df, aes(x = INC_SDT1_label, y = n_GOD2, fill = GOD2_label)) +
+  geom_bar(position='fill', stat='identity', width = 0.5) +
+  labs(x="\nTotal Family Income", y="percentage",
+       title="How certain are you about your belief in God or a universal spirit?") +
+  guides(fill=guide_legend(title="")) +
+  scale_y_continuous(name = "percentage", labels = scales::label_percent(accuracy = 1)) + 
+  scale_x_discrete(labels = wrap_format(10)) +
+  theme_minimal()
+
+```
+
+Here, I've broken down certainty in one's belief system by their self-identified political party. Strikingly, we see that about 75% of republicans responded as absolutely certain in their beliefs, \~25% more than the within-democrat or within-independent compositions. Further, republicans have only a small fraction of respondents who are not at all certain in their beliefs. This finding suggests a pretty serious self-certainty homogeneity among Republicans, especially compared to democrats or independents.
+
+```{r}
+#| echo: false
+
+party_spirit_df <- rls_df %>%
+  filter(!PARTY_label %in% c("DON'T KNOW/REFUSED", "Something else"),
+         GOD2_label != "DON'T KNOW/REFUSED") %>%
+  group_by(PARTY_label, GOD2_label) %>%
+  count(name = "n_GOD2") %>%
+  ungroup() %>%
+  mutate(GOD2_label = fct_rev(GOD2_label))
+
+ggplot(party_spirit_df, aes(x = PARTY_label, y = n_GOD2, fill = GOD2_label)) +
+  geom_bar(position='fill', stat='identity', width = 0.3) +
+  labs(x="\nPolitical Party", y="percentage",
+       title="How certain are you about your belief in God or a universal spirit?") +
+  guides(fill=guide_legend(title="")) +
+  scale_y_continuous(name = "percentage", labels = scales::label_percent(accuracy = 1)) + 
+  theme_minimal()
+  
+```
